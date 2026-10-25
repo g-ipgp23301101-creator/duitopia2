@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DUITOPIA: MISI CARA MENABUNG - Bahasa Melayu Tahun 5</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Fredoka & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- MediaPipe Hands & Drawing Utils (Versi CDN Terkunci untuk Kestabilan WASM) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        duitopia: {
+                            teal: '#0D9488',
+                            sky: '#0284C7',
+                            purple: '#7C3AED',
+                            gold: '#F59E0B',
+                            yellow: '#FBBF24',
+                            bg: '#F0FDFA',
+                            card: '#FFFFFF',
+                            accent: '#EC4899'
+                        }
+                    },
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0F172A;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-game {
+            font-family: 'Fredoka', cursive, sans-serif;
+        }
+
+        /* Latar Belakang Terapung */
+        .bg-animated {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f766e 100%);
+            position: relative;
+        }
+
+        .floating-element {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(3deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.1s linear;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .btn-game {
+            transition: all 0.15s ease-out;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+        }
+
+        .btn-game:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.25);
+        }
+
+        .mirror {
+            transform: scaleX(-1);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between text-slate-800 bg-animated overflow-hidden">
+
+    <div id="app" class="relative w-full h-full flex flex-col justify-between max-w-7xl mx-auto p-3 sm:p-5">
+
+        <!-- HEADER BAR -->
+        <header id="main-header" class="hidden w-full flex justify-between items-center bg-slate-900/80 backdrop-blur-md text-white p-3 px-6 rounded-2xl border border-slate-700 shadow-xl z-30">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center text-slate-900 text-xl font-black shadow-lg">
+                    💎
+                </div>
+                <div>
+                    <h1 class="font-game text-xl tracking-wide text-amber-400 leading-none">DUITOPIA</h1>
+                    <span id="mission-title-header" class="text-xs text-slate-300 font-semibold">MISI 1: SIMPAN DULU!</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <div class="hidden md:flex flex-col items-end">
+                    <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Mata Keseluruhan</span>
+                    <span id="header-score" class="font-game text-2xl text-yellow-400 leading-none">0</span>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button id="btn-sound" onclick="game.toggleSound()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-slate-200 transition">
+                        <i id="icon-sound" class="fas fa-volume-up"></i>
+                    </button>
+                    <button id="btn-pause" onclick="game.togglePause()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-slate-200 transition">
+                        <i class="fas fa-pause"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 1. SKRIN PEMBUKAAN -->
+        <section id="screen-welcome" class="w-full h-full flex flex-col items-center justify-center text-center px-4 relative z-20">
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <span class="absolute top-10 left-10 text-4xl floating-element" style="animation-delay: 0s;">🪙</span>
+                <span class="absolute top-1/4 right-16 text-5xl floating-element" style="animation-delay: 1s;">💰</span>
+                <span class="absolute bottom-16 left-20 text-4xl floating-element" style="animation-delay: 1.5s;">⭐</span>
+                <span class="absolute bottom-10 right-24 text-3xl floating-element" style="animation-delay: 0.5s;">👑</span>
+            </div>
+
+            <div class="max-w-xl w-full flex flex-col items-center">
+                <!-- Maskot "DUITI": Peti Harta Karun Emas -->
+                <div class="w-40 h-40 sm:w-48 sm:h-48 mb-4 relative floating-element">
+                    <svg viewBox="0 0 200 200" class="w-full h-full drop-shadow-2xl">
+                        <rect x="30" y="70" width="140" height="100" rx="16" fill="#F59E0B" stroke="#78350F" stroke-width="6"/>
+                        <rect x="30" y="70" width="140" height="40" rx="10" fill="#FBBF24" stroke="#78350F" stroke-width="6"/>
+                        <rect x="50" y="70" width="20" height="100" fill="#D97706" />
+                        <rect x="130" y="70" width="20" height="100" fill="#D97706" />
+                        <path d="M 30 75 Q 100 20 170 75 Z" fill="#FBBF24" stroke="#78350F" stroke-width="6"/>
+                        <path d="M 30 75 Q 100 35 170 75 Z" fill="#F59E0B" />
+                        <circle cx="100" cy="110" r="14" fill="#FEF08A" stroke="#78350F" stroke-width="4"/>
+                        <rect x="96" y="110" width="8" height="12" fill="#78350F" />
+                        <circle cx="75" cy="100" r="9" fill="#1E293B"/>
+                        <circle cx="125" cy="100" r="9" fill="#1E293B"/>
+                        <circle cx="77" cy="97" r="3" fill="#FFFFFF"/>
+                        <circle cx="127" cy="97" r="3" fill="#FFFFFF"/>
+                        <circle cx="65" cy="112" r="7" fill="#F43F5E" opacity="0.5"/>
+                        <circle cx="135" cy="112" r="7" fill="#F43F5E" opacity="0.5"/>
+                        <path d="M 90 120 Q 100 130 110 120" fill="transparent" stroke="#1E293B" stroke-width="4" stroke-linecap="round"/>
+                        <polygon points="100,35 106,48 120,48 109,56 113,70 100,60 87,70 91,56 80,48 94,48" fill="#38BDF8"/>
+                    </svg>
+                </div>
+
+                <h1 class="font-game text-4xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 drop-shadow-lg tracking-wider mb-1">
+                    DUITOPIA
+                </h1>
+                <p class="font-game text-xl sm:text-2xl text-teal-300 mb-6 tracking-wide drop-shadow">
+                    MISI CARA MENABUNG
+                </p>
+
+                <div class="w-full flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <button onclick="game.startCameraSetup()" class="btn-game w-full sm:w-64 py-4 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-game text-2xl rounded-2xl border-2 border-teal-300 shadow-xl flex items-center justify-center space-x-3">
+                        <i class="fas fa-play"></i>
+                        <span>MULA MISI</span>
+                    </button>
+                    
+                    <button onclick="game.showTutorial()" class="btn-game w-full sm:w-56 py-4 px-6 bg-slate-800 hover:bg-slate-700 text-amber-300 font-game text-xl rounded-2xl border-2 border-slate-600 shadow-xl flex items-center justify-center space-x-2">
+                        <i class="fas fa-book-open"></i>
+                        <span>CARA BERMAIN</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. SKRIN TUTORIAL -->
+        <section id="screen-tutorial" class="hidden w-full h-full flex flex-col items-center justify-center px-4 z-20">
+            <div class="glass-card max-w-3xl w-full p-6 sm:p-8 rounded-3xl text-slate-800 shadow-2xl flex flex-col justify-between max-h-[90vh] overflow-y-auto">
+                <div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-game text-3xl text-teal-800 flex items-center gap-2">
+                            <i class="fas fa-hand-holding-usd text-amber-500"></i> Panduan Isyarat Jari
+                        </h2>
+                        <button onclick="game.showScreen('screen-welcome')" class="text-slate-400 hover:text-slate-600 text-2xl">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </div>
+
+                    <p class="text-slate-600 mb-6 font-semibold">Tunjukkan bilangan jari di hadapan kamera iPad untuk memilih jawapan secara automatik!</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-teal-50 border-2 border-teal-200 rounded-2xl p-4 flex flex-col items-center text-center">
+                            <div class="text-5xl mb-2">☝️</div>
+                            <span class="font-game text-lg text-teal-800">1 JARI TELUNJUK</span>
+                            <span class="text-xs bg-teal-600 text-white font-bold px-3 py-1 rounded-full mt-2">Pilih Pilihan A</span>
+                        </div>
+
+                        <div class="bg-sky-50 border-2 border-sky-200 rounded-2xl p-4 flex flex-col items-center text-center">
+                            <div class="text-5xl mb-2">✌️</div>
+                            <span class="font-game text-lg text-sky-800">2 JARI (V)</span>
+                            <span class="text-xs bg-sky-600 text-white font-bold px-3 py-1 rounded-full mt-2">Pilih Pilihan B</span>
+                        </div>
+
+                        <div class="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4 flex flex-col items-center text-center">
+                            <div class="text-5xl mb-2">🤟</div>
+                            <span class="font-game text-lg text-purple-800">3 JARI</span>
+                            <span class="text-xs bg-purple-600 text-white font-bold px-3 py-1 rounded-full mt-2">Pilih Pilihan C</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-sm text-amber-900 mb-4">
+                        <p class="font-bold mb-1"><i class="fas fa-lightbulb"></i> Pengesahan Otomatik:</p>
+                        Pegang isyarat jari anda di hadapan kamera secara stabil selama <strong>0.8 saat</strong>. Pilihan jawapan anda akan <strong>terus disahkan secara automatik!</strong>
+                    </div>
+                </div>
+
+                <button onclick="game.startCameraSetup()" class="btn-game w-full py-4 bg-teal-600 hover:bg-teal-500 text-white font-game text-xl rounded-2xl shadow-lg mt-2">
+                    FAHAM! MULA SEKARANG
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. SKRIN UJIAN KAMERA -->
+        <section id="screen-camera" class="hidden w-full h-full flex flex-col items-center justify-center px-4 z-20">
+            <div class="glass-card max-w-2xl w-full p-6 sm:p-8 rounded-3xl text-slate-800 shadow-2xl flex flex-col items-center text-center">
+                
+                <h2 class="font-game text-3xl text-teal-800 mb-2">AKTIFKAN KUASA JARI ANDA!</h2>
+                <p class="text-slate-600 text-sm mb-4">Pastikan tangan anda kelihatan jelas di dalam petak kamera hadapan.</p>
+
+                <div class="relative w-72 h-54 sm:w-96 sm:h-72 bg-slate-900 rounded-2xl overflow-hidden border-4 border-teal-400 shadow-inner mb-4 flex items-center justify-center">
+                    <video id="webcam-setup" class="w-full h-full object-cover mirror" playsinline autoplay muted></video>
+                    <canvas id="canvas-setup" class="absolute inset-0 w-full h-full object-cover mirror pointer-events-none"></canvas>
+                    
+                    <div id="camera-loading" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center text-white p-4">
+                        <i class="fas fa-circle-notch fa-spin text-4xl text-teal-400 mb-3"></i>
+                        <p id="camera-status-text" class="font-game text-sm text-center">Menghubungkan Kamera & Model MediaPipe...</p>
+                    </div>
+                </div>
+
+                <div id="gesture-badge-setup" class="bg-slate-100 border border-slate-300 rounded-full px-5 py-2 mb-6 flex items-center space-x-3">
+                    <span class="text-slate-500 font-bold text-xs uppercase">Pengesanan Semasa:</span>
+                    <span id="detected-gesture-text" class="font-game text-lg text-teal-700">Tunjukkan 1, 2 atau 3 jari</span>
+                </div>
+
+                <div id="camera-error-box" class="hidden w-full bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl text-xs mb-4 text-left">
+                    <p class="font-bold"><i class="fas fa-exclamation-triangle"></i> Capaian Kamera Dihalang / Memerlukan HTTPS:</p>
+                    <p class="mt-1">Sila benarkan akses kamera pada tetapan Safari iPad anda, atau teruskan menggunakan <strong>Mod Sentuhan Skrin</strong>.</p>
+                </div>
+
+                <div class="w-full flex flex-col sm:flex-row gap-3">
+                    <button id="btn-start-gameplay" onclick="game.startGameplay()" disabled class="btn-game flex-1 py-4 bg-emerald-600 opacity-50 cursor-not-allowed text-white font-game text-xl rounded-2xl shadow-lg transition">
+                        MASUK KE DUITOPIA <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    <button onclick="game.enableTouchFallback()" class="btn-game py-4 px-6 bg-slate-700 hover:bg-slate-600 text-amber-300 font-game text-sm rounded-2xl border border-slate-500">
+                        Guna Mod Sentuhan
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. SKRIN UTAMA PERMAINAN -->
+        <section id="screen-game" class="hidden w-full h-full flex flex-col justify-between py-2 z-20">
+            <div class="w-full flex justify-between items-center mb-3">
+                <div class="bg-slate-900/90 text-teal-300 px-4 py-2 rounded-xl border border-slate-700 font-game text-sm flex items-center space-x-2">
+                    <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span id="game-mission-name">MISI 1: SIMPAN DULU!</span>
+                </div>
+
+                <div class="flex-1 max-w-xs mx-4 bg-slate-800 h-4 rounded-full overflow-hidden border border-slate-700 p-0.5">
+                    <div id="question-progress-bar" class="bg-gradient-to-r from-teal-400 to-emerald-400 h-full rounded-full transition-all duration-500" style="width: 12.5%;"></div>
+                </div>
+
+                <div class="bg-slate-900/90 text-amber-300 px-4 py-2 rounded-xl border border-slate-700 font-game text-sm">
+                    Soalan <span id="current-q-num">1</span> / 8
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center flex-1">
+                <div class="lg:col-span-8 flex flex-col space-y-3">
+                    <div class="glass-card p-5 rounded-3xl shadow-xl relative border-l-8 border-teal-500">
+                        <span id="question-tag" class="text-xs font-bold text-teal-700 bg-teal-100 px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">Cara 1: Mengasingkan Wang Saku</span>
+                        <h3 id="question-text" class="text-slate-800 font-semibold text-lg sm:text-xl leading-relaxed">
+                            Memuatkan soalan...
+                        </h3>
+                    </div>
+
+                    <div class="flex flex-col space-y-2.5">
+                        <div id="card-opt-A" onclick="game.selectOption('A')" class="glass-card p-4 rounded-2xl border-2 border-transparent hover:border-teal-400 cursor-pointer transition flex items-center justify-between group">
+                            <div class="flex items-center space-x-3 pr-2">
+                                <div class="w-10 h-10 rounded-xl bg-teal-600 text-white font-game text-xl flex items-center justify-center shadow-md flex-shrink-0">
+                                    A
+                                </div>
+                                <span id="text-opt-A" class="text-slate-700 font-medium text-sm sm:text-base">Pilihan A</span>
+                            </div>
+                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                <span class="text-2xl opacity-70 group-hover:opacity-100">☝️</span>
+                                <span class="text-xs text-slate-400 font-bold hidden sm:inline">(1 Jari)</span>
+                            </div>
+                        </div>
+
+                        <div id="card-opt-B" onclick="game.selectOption('B')" class="glass-card p-4 rounded-2xl border-2 border-transparent hover:border-sky-400 cursor-pointer transition flex items-center justify-between group">
+                            <div class="flex items-center space-x-3 pr-2">
+                                <div class="w-10 h-10 rounded-xl bg-sky-600 text-white font-game text-xl flex items-center justify-center shadow-md flex-shrink-0">
+                                    B
+                                </div>
+                                <span id="text-opt-B" class="text-slate-700 font-medium text-sm sm:text-base">Pilihan B</span>
+                            </div>
+                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                <span class="text-2xl opacity-70 group-hover:opacity-100">✌️</span>
+                                <span class="text-xs text-slate-400 font-bold hidden sm:inline">(2 Jari)</span>
+                            </div>
+                        </div>
+
+                        <div id="card-opt-C" onclick="game.selectOption('C')" class="glass-card p-4 rounded-2xl border-2 border-transparent hover:border-purple-400 cursor-pointer transition flex items-center justify-between group">
+                            <div class="flex items-center space-x-3 pr-2">
+                                <div class="w-10 h-10 rounded-xl bg-purple-600 text-white font-game text-xl flex items-center justify-center shadow-md flex-shrink-0">
+                                    C
+                                </div>
+                                <span id="text-opt-C" class="text-slate-700 font-medium text-sm sm:text-base">Pilihan C</span>
+                            </div>
+                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                <span class="text-2xl opacity-70 group-hover:opacity-100">🤟</span>
+                                <span class="text-xs text-slate-400 font-bold hidden sm:inline">(3 Jari)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 flex flex-col space-y-3">
+                    <div class="bg-slate-900 p-3 rounded-3xl border-2 border-slate-700 shadow-xl flex flex-col items-center relative">
+                        <div class="relative w-full h-44 bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 flex items-center justify-center">
+                            <video id="webcam-game" class="w-full h-full object-cover mirror" playsinline autoplay muted></video>
+                            <canvas id="canvas-game" class="absolute inset-0 w-full h-full object-cover mirror pointer-events-none"></canvas>
+                            
+                            <div id="dwell-container" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/40 opacity-0 transition-opacity">
+                                <svg class="w-20 h-20">
+                                    <circle class="text-slate-700" stroke-width="6" stroke="currentColor" fill="transparent" r="32" cx="40" cy="40"/>
+                                    <circle id="dwell-circle" class="progress-ring-circle text-teal-400" stroke-width="6" stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round" stroke="currentColor" fill="transparent" r="32" cx="40" cy="40"/>
+                                </svg>
+                                <span id="dwell-text" class="text-white font-game text-xs mt-1">MEMILIH...</span>
+                            </div>
+                        </div>
+
+                        <div class="w-full flex justify-between items-center mt-2 px-2 text-xs">
+                            <span class="text-slate-400">Pengesan Jari:</span>
+                            <span id="game-gesture-status" class="font-game text-amber-400">Menunggu Tangan...</span>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-4 rounded-3xl flex items-center space-x-3 shadow-lg border-2 border-amber-300">
+                        <div class="w-16 h-16 flex-shrink-0 relative">
+                            <svg viewBox="0 0 200 200" class="w-full h-full">
+                                <rect x="30" y="70" width="140" height="100" rx="16" fill="#F59E0B" stroke="#78350F" stroke-width="6"/>
+                                <rect x="30" y="70" width="140" height="40" rx="10" fill="#FBBF24" stroke="#78350F" stroke-width="6"/>
+                                <circle cx="75" cy="100" r="9" fill="#1E293B"/>
+                                <circle cx="125" cy="100" r="9" fill="#1E293B"/>
+                                <circle cx="77" cy="97" r="3" fill="#FFFFFF"/>
+                                <circle cx="127" cy="97" r="3" fill="#FFFFFF"/>
+                                <path d="M 90 120 Q 100 130 110 120" fill="transparent" stroke="#1E293B" stroke-width="4" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-xs font-bold text-amber-700 block">Duiti Kata:</span>
+                            <p id="duiti-dialogue" class="text-xs sm:text-sm text-slate-700 font-medium italic">
+                                "Tunjukkan 1, 2 atau 3 jari di hadapan kamera untuk memilih jawapan!"
+                            </p>
+                        </div>
+                    </div>
+
+                    <button id="btn-next-question" onclick="game.nextQuestion()" class="hidden btn-game w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-game text-xl rounded-2xl shadow-xl flex items-center justify-center space-x-2">
+                        <span>MISI SETERUSNYA</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. SKRIN KEMENANGAN -->
+        <section id="screen-victory" class="hidden w-full h-full flex flex-col items-center justify-center px-4 py-6 z-20 overflow-y-auto">
+            <div class="glass-card max-w-4xl w-full p-6 sm:p-8 rounded-3xl text-slate-800 shadow-2xl flex flex-col items-center text-center my-auto">
+                <div class="w-24 h-24 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full flex items-center justify-center text-5xl shadow-xl mb-4 floating-element border-4 border-white">
+                    🏆
+                </div>
+
+                <h2 class="font-game text-3xl sm:text-5xl text-amber-600 mb-1 tracking-wide">
+                    TAHNIAH, WIRA DUITOPIA!
+                </h2>
+                <p class="text-slate-600 text-sm sm:text-base font-semibold mb-6">
+                    Anda telah berjaya menyempurnakan kesemua 4 Misi Cara Menabung!
+                </p>
+
+                <div class="w-full max-w-md bg-teal-900 text-white rounded-2xl p-4 mb-6 flex justify-around items-center border border-teal-700 shadow-inner">
+                    <div>
+                        <span class="text-xs text-teal-300 block uppercase font-bold">Jumlah Mata</span>
+                        <span id="final-score" class="font-game text-3xl text-amber-400">800</span>
+                    </div>
+                    <div class="h-8 w-px bg-teal-700"></div>
+                    <div>
+                        <span class="text-xs text-teal-300 block uppercase font-bold">Misi Selesai</span>
+                        <span class="font-game text-3xl text-emerald-400">4 / 4</span>
+                    </div>
+                </div>
+
+                <div class="w-full bg-amber-50/80 border-2 border-amber-300 rounded-2xl p-4 sm:p-6 mb-6 text-left">
+                    <div class="flex items-center space-x-2 mb-3">
+                        <i class="fas fa-pen-square text-amber-600 text-2xl"></i>
+                        <h3 class="font-game text-xl text-amber-900">Tugasan Lembaran Kerja Murid (Peta Minda):</h3>
+                    </div>
+                    <p class="text-xs sm:text-sm text-amber-950 font-medium mb-4">
+                        Sila rujuk 4 isi ringkasan di bawah untuk melengkapkan 4 cabang peta minda <strong>"Cara-cara Menabung"</strong> pada lembaran kerja anda:
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-sm flex items-start space-x-3">
+                            <span class="w-7 h-7 rounded-lg bg-teal-600 text-white font-game flex items-center justify-center flex-shrink-0 text-sm">1</span>
+                            <div>
+                                <h4 class="font-game text-sm text-teal-800">Mengasingkan Wang</h4>
+                                <p class="text-xs text-slate-600">Mengasingkan sebahagian wang saku lebih awal sebelum berbelanja.</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-sm flex items-start space-x-3">
+                            <span class="w-7 h-7 rounded-lg bg-sky-600 text-white font-game flex items-center justify-center flex-shrink-0 text-sm">2</span>
+                            <div>
+                                <h4 class="font-game text-sm text-sky-800">Mengutamakan Keperluan</h4>
+                                <p class="text-xs text-slate-600">Utamakan barang keperluan harian berbanding barang kehendak.</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-sm flex items-start space-x-3">
+                            <span class="w-7 h-7 rounded-lg bg-purple-600 text-white font-game flex items-center justify-center flex-shrink-0 text-sm">3</span>
+                            <div>
+                                <h4 class="font-game text-sm text-purple-800">Mengurangkan Perbelanjaan</h4>
+                                <p class="text-xs text-slate-600">Elakkan perbelanjaan tidak perlu dan bandingkan harga barang.</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-amber-200 shadow-sm flex items-start space-x-3">
+                            <span class="w-7 h-7 rounded-lg bg-amber-600 text-white font-game flex items-center justify-center flex-shrink-0 text-sm">4</span>
+                            <div>
+                                <h4 class="font-game text-sm text-amber-800">Menetapkan Matlamat Simpanan</h4>
+                                <p class="text-xs text-slate-600">Tetapkan sasaran jumlah wang dan tempoh masa menabung.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="game.resetGame()" class="btn-game w-full sm:w-64 py-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-game text-xl rounded-2xl shadow-xl">
+                    <i class="fas fa-redo ml-1 mr-2"></i> MAIN SEMULA
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- JAVASCRIPT GAME LOGIC -->
+    <script>
+        const QUESTION_DATABASE = [
+            {
+                id: 'q1',
+                missionId: 1,
+                missionName: 'MISI 1: SIMPAN DULU!',
+                focusTag: 'Cara 1: Mengasingkan Wang Saku',
+                question: 'Aina menerima wang saku RM8 sehari. Dia ingin membeli buku rujukan berharga RM24 dalam dua minggu. Apakah tindakan paling sesuai untuk mencapai matlamat tersebut?',
+                options: [
+                    { id: 'opt_a', text: 'Menyimpan semua wang saku setiap hari dan tidak makan di sekolah.' },
+                    { id: 'opt_b', text: 'Mengasingkan sebahagian wang saku lebih awal sebelum berbelanja.', isCorrect: true },
+                    { id: 'opt_c', text: 'Menyimpan wang hanya apabila terdapat lebihan pada penghujung minggu.' }
+                ],
+                hint: 'Fikirkan cara mengasingkan sebahagian wang saku lebih awal secara konsisten.'
+            },
+            {
+                id: 'q2',
+                missionId: 1,
+                missionName: 'MISI 1: SIMPAN DULU!',
+                focusTag: 'Cara 1: Mengasingkan Wang Saku',
+                question: 'Hakim mendapat RM40 sebagai hadiah hari lahir. Dia mahu membeli alat tulis dan menabung baki wang tersebut. Apakah cara menabung yang paling tepat?',
+                options: [
+                    { id: 'opt_a', text: 'Membeli barang yang disukai dahulu, kemudian melihat baki jika ada.' },
+                    { id: 'opt_b', text: 'Mengasingkan simpanan terlebih dahulu sebelum membeli alat tulis.', isCorrect: true },
+                    { id: 'opt_c', text: 'Menyimpan semua wang dan tidak membeli alat tulis yang diperlukan.' }
+                ],
+                hint: 'Asingkan bahagian simpanan terlebih dahulu sebelum anda membelanjakannya.'
+            },
+            {
+                id: 'q3',
+                missionId: 2,
+                missionName: 'MISI 2: KEPERLUAN DIDAHULUKAN',
+                focusTag: 'Cara 2: Mengutamakan Keperluan',
+                question: 'Faris ada RM30. Dia perlu membeli buku latihan (RM12) dan tambang bas (RM8). Dia juga mahu membeli mainan (RM15). Apakah keputusan yang paling bijak?',
+                options: [
+                    { id: 'opt_a', text: 'Mengutamakan barang keperluan harian berbanding barang kehendak.', isCorrect: true },
+                    { id: 'opt_b', text: 'Membeli mainan dahulu kerana mainan itu sangat disukainya.' },
+                    { id: 'opt_c', text: 'Membeli buku latihan dan mainan tanpa mengambil kira tambang bas.' }
+                ],
+                hint: 'Dahulukan barang yang benar-benar diperlukan untuk sekolah dan harian.'
+            },
+            {
+                id: 'q4',
+                missionId: 2,
+                missionName: 'MISI 2: KEPERLUAN DIDAHULUKAN',
+                focusTag: 'Cara 2: Mengutamakan Keperluan',
+                question: 'Kasut sekolah Nadia telah rosak. Pada masa sama, Nadia amat menginginkan fon kepala baharu. Apakah keputusan yang patut diambilnya?',
+                options: [
+                    { id: 'opt_a', text: 'Membeli fon kepala dahulu kerana ia sedang menjadi trend.' },
+                    { id: 'opt_b', text: 'Mengutamakan membeli kasut sekolah kerana ia adalah keperluan utama.', isCorrect: true },
+                    { id: 'opt_c', text: 'Membeli kedua-duanya sekali dengan meminjam wang rakan.' }
+                ],
+                hint: 'Kasut sekolah adalah keperluan harian, manakala fon kepala ialah kehendak.'
+            },
+            {
+                id: 'q5',
+                missionId: 3,
+                missionName: 'MISI 3: PEMBELI BIJAK',
+                focusTag: 'Cara 3: Mengurangkan Perbelanjaan',
+                question: 'Kedai A menjual botol air RM18. Kedai B menjual botol sama RM15 tetapi kos pos RM4 (Jumlah RM19). Bagaimanakah pembeli bijak mengurangkan perbelanjaan?',
+                options: [
+                    { id: 'opt_a', text: 'Membeli di Kedai B kerana harga asal barang lebih murah.' },
+                    { id: 'opt_b', text: 'Mengurangkan perbelanjaan dengan membandingkan jumlah kos keseluruhan.', isCorrect: true },
+                    { id: 'opt_c', text: 'Membeli di kedua-dua kedai untuk membuat perbandingan.' }
+                ],
+                hint: 'Kira keseluruhan jumlah bayaran untuk mengurangkan perbelanjaan yang tidak perlu.'
+            },
+            {
+                id: 'q6',
+                missionId: 3,
+                missionName: 'MISI 3: PEMBELI BIJAK',
+                focusTag: 'Cara 3: Mengurangkan Perbelanjaan',
+                question: 'Beg sekolah Sara masih elok, tetapi dia ternampak beg baharu yang cantik di kedai. Apakah tindakan paling tepat bagi seorang pembeli bijak?',
+                options: [
+                    { id: 'opt_a', text: 'Mengurangkan perbelanjaan tidak perlu dengan terus menggunakan beg sedia ada.', isCorrect: true },
+                    { id: 'opt_b', text: 'Membeli beg baharu itu supaya tidak ketinggalan dengan rakan-rakan.' },
+                    { id: 'opt_c', text: 'Membeli beg baharu hanya jika mendapat potongan harga separuh.' }
+                ],
+                hint: 'Elakkan membeli barang baharu jika barang sedia ada masih boleh digunakan.'
+            },
+            {
+                id: 'q7',
+                missionId: 4,
+                missionName: 'MISI 4: MATLAMAT SIMPANAN',
+                focusTag: 'Cara 4: Menetapkan Matlamat Simpanan',
+                question: 'Mei Ling ingin mengumpul RM60 dalam masa 6 minggu. Bagaimanakah cara terbaik untuk dia memastikan sasaran ini tercapai?',
+                options: [
+                    { id: 'opt_a', text: 'Menetapkan matlamat simpanan sebanyak RM10 setiap minggu secara konsisten.', isCorrect: true },
+                    { id: 'opt_b', text: 'Menabung secara rawak tanpa mengira jumlah atau tempoh masa.' },
+                    { id: 'opt_c', text: 'Menunggu sehingga minggu terakhir untuk menyimpan semua wang sekaligus.' }
+                ],
+                hint: 'Tetapkan sasaran jumlah wang dan tempoh masa menabung yang jelas.'
+            },
+            {
+                id: 'q8',
+                missionId: 4,
+                missionName: 'MISI 4: MATLAMAT SIMPANAN',
+                focusTag: 'Cara 4: Menetapkan Matlamat Simpanan',
+                question: 'Ravi berhasrat membeli kamus berharga RM36 dalam masa 4 minggu dengan menyimpan RM9 seminggu. Apakah rumusan tentang perancangannya?',
+                options: [
+                    { id: 'opt_a', text: 'Perancangannya gagal kerana RM9 seminggu terlalu sedikit.' },
+                    { id: 'opt_b', text: 'Menetapkan matlamat simpanan dan mematuhinya membolehkan kamus dibeli.', isCorrect: true },
+                    { id: 'opt_c', text: 'Ravi patut meminjam wang dahulu dan menabung kemudian hari.' }
+                ],
+                hint: 'Darabkan simpanan mingguan dengan tempoh masa untuk mencapai matlamat.'
+            }
+        ];
+
+        class SoundController {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playBeep(freq = 440, duration = 0.1, type = 'sine') {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+
+            playSuccess() {
+                if (this.muted) return;
+                this.playBeep(523.25, 0.1, 'triangle');
+                setTimeout(() => this.playBeep(659.25, 0.1, 'triangle'), 100);
+                setTimeout(() => this.playBeep(783.99, 0.25, 'triangle'), 200);
+            }
+
+            playError() {
+                if (this.muted) return;
+                this.playBeep(220, 0.15, 'sawtooth');
+                setTimeout(() => this.playBeep(180, 0.2, 'sawtooth'), 120);
+            }
+        }
+
+        class DuitopiaGame {
+            constructor() {
+                this.sound = new SoundController();
+                this.currentQuestionIndex = 0;
+                this.score = 0;
+                this.questions = [];
+                this.currentAttempts = 0;
+                this.selectedOptionLetter = null;
+                
+                this.hands = null;
+                this.videoElement = null;
+                this.canvasElement = null;
+                this.canvasCtx = null;
+                this.touchFallbackMode = false;
+                this.stream = null;
+                this.animFrameId = null;
+                
+                this.detectedFingerCount = 0;
+                this.dwellStartTime = null;
+                this.dwellDuration = 800;
+                this.lastStableGesture = 0;
+                this.isProcessingAnswer = false;
+            }
+
+            init() {
+                console.log("DUITOPIA Game Initialized");
+            }
+
+            showScreen(screenId) {
+                const screens = ['screen-welcome', 'screen-tutorial', 'screen-camera', 'screen-game', 'screen-victory'];
+                screens.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                });
+                
+                const target = document.getElementById(screenId);
+                if (target) target.classList.remove('hidden');
+
+                const header = document.getElementById('main-header');
+                if (screenId === 'screen-game') {
+                    header.classList.remove('hidden');
+                } else if (screenId === 'screen-welcome') {
+                    header.classList.add('hidden');
+                }
+            }
+
+            showTutorial() {
+                this.sound.init();
+                this.sound.playBeep(600, 0.05);
+                this.showScreen('screen-tutorial');
+            }
+
+            toggleSound() {
+                this.sound.muted = !this.sound.muted;
+                const icon = document.getElementById('icon-sound');
+                if (this.sound.muted) {
+                    icon.className = 'fas fa-volume-mute text-rose-400';
+                } else {
+                    icon.className = 'fas fa-volume-up text-emerald-400';
+                    this.sound.playBeep(800, 0.1);
+                }
+            }
+
+            togglePause() {
+                alert("Permainan Diberhentikan Seketika (Jeda). Tekan OK untuk menyambung.");
+            }
+
+            shuffleArray(array) {
+                const arr = [...array];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            startCameraSetup() {
+                this.sound.init();
+                this.showScreen('screen-camera');
+                this.initHandTracking('webcam-setup', 'canvas-setup', true);
+            }
+
+            enableTouchFallback() {
+                this.touchFallbackMode = true;
+                this.stopCameraStream();
+                this.startGameplay();
+            }
+
+            stopCameraStream() {
+                if (this.animFrameId) {
+                    cancelAnimationFrame(this.animFrameId);
+                    this.animFrameId = null;
+                }
+                if (this.stream) {
+                    this.stream.getTracks().forEach(track => track.stop());
+                    this.stream = null;
+                }
+            }
+
+            async initHandTracking(videoId, canvasId, isSetupScreen = false) {
+                this.stopCameraStream();
+
+                this.videoElement = document.getElementById(videoId);
+                this.canvasElement = document.getElementById(canvasId);
+                this.canvasCtx = this.canvasElement.getContext('2d');
+
+                const statusText = document.getElementById('camera-status-text');
+                const loadingOverlay = document.getElementById('camera-loading');
+                const errorBox = document.getElementById('camera-error-box');
+
+                try {
+                    // Pustaka MediaPipe Hands menggunakan CDN spesifik
+                    if (!this.hands) {
+                        this.hands = new Hands({
+                            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+                        });
+
+                        this.hands.setOptions({
+                            maxNumHands: 1,
+                            modelComplexity: 1,
+                            minDetectionConfidence: 0.5,
+                            minTrackingConfidence: 0.5
+                        });
+                    }
+
+                    // Re-bind listener mengikut skrin
+                    this.hands.onResults((results) => this.onHandResults(results, isSetupScreen));
+
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'user',
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        },
+                        audio: false
+                    });
+
+                    this.videoElement.srcObject = this.stream;
+                    await this.videoElement.play();
+
+                    this.canvasElement.width = this.videoElement.videoWidth || 640;
+                    this.canvasElement.height = this.videoElement.videoHeight || 480;
+
+                    if (loadingOverlay) loadingOverlay.classList.add('hidden');
+
+                    if (isSetupScreen) {
+                        const btnStart = document.getElementById('btn-start-gameplay');
+                        if (btnStart) {
+                            btnStart.disabled = false;
+                            btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
+                            btnStart.classList.add('hover:bg-emerald-500');
+                        }
+                    }
+
+                    // Frame processing loop
+                    const sendFrame = async () => {
+                        if (this.videoElement && !this.videoElement.paused && !this.videoElement.ended) {
+                            try {
+                                await this.hands.send({ image: this.videoElement });
+                            } catch (e) {
+                                console.log("Processing frame error:", e);
+                            }
+                        }
+                        this.animFrameId = requestAnimationFrame(sendFrame);
+                    };
+                    sendFrame();
+
+                } catch (err) {
+                    console.error("Camera access failed:", err);
+                    if (statusText) statusText.innerText = "Gagal mengakses kamera. (HTTPS Diperlukan)";
+                    if (errorBox) errorBox.classList.remove('hidden');
+                }
+            }
+
+            onHandResults(results, isSetupScreen) {
+                this.canvasCtx.save();
+                this.canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+
+                let fingerCount = 0;
+
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    const landmarks = results.multiHandLandmarks[0];
+                    
+                    // Melukis landmark tangan
+                    if (typeof drawConnectors === 'function' && typeof drawLandmarks === 'function' && typeof HAND_CONNECTIONS !== 'undefined') {
+                        drawConnectors(this.canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#0D9488', lineWidth: 4 });
+                        drawLandmarks(this.canvasCtx, landmarks, { color: '#F59E0B', lineWidth: 2, radius: 4 });
+                    }
+
+                    // Ujian Jari Yang Diangkat (Algoritma Penambahan Toleransi Kecondongan)
+                    const wrist = landmarks[0];
+                    
+                    // Jari Telunjuk (8 vs 6 & 5)
+                    const isIndexUp = (landmarks[8].y < landmarks[6].y) || 
+                                     (Math.hypot(landmarks[8].x - wrist.x, landmarks[8].y - wrist.y) > Math.hypot(landmarks[6].x - wrist.x, landmarks[6].y - wrist.y) * 1.1);
+                    
+                    // Jari Tengah (12 vs 10 & 9)
+                    const isMiddleUp = (landmarks[12].y < landmarks[10].y) || 
+                                      (Math.hypot(landmarks[12].x - wrist.x, landmarks[12].y - wrist.y) > Math.hypot(landmarks[10].x - wrist.x, landmarks[10].y - wrist.y) * 1.1);
+                    
+                    // Jari Manis (16 vs 14)
+                    const isRingUp = (landmarks[16].y < landmarks[14].y) || 
+                                    (Math.hypot(landmarks[16].x - wrist.x, landmarks[16].y - wrist.y) > Math.hypot(landmarks[14].x - wrist.x, landmarks[14].y - wrist.y) * 1.1);
+                    
+                    // Jari Kelingking (20 vs 18)
+                    const isPinkyUp = (landmarks[20].y < landmarks[18].y) || 
+                                     (Math.hypot(landmarks[20].x - wrist.x, landmarks[20].y - wrist.y) > Math.hypot(landmarks[18].x - wrist.x, landmarks[18].y - wrist.y) * 1.1);
+
+                    // Pengelasan Bilangan Jari (1, 2 atau 3 Jari)
+                    if (isIndexUp && !isMiddleUp && !isRingUp && !isPinkyUp) {
+                        fingerCount = 1;
+                    } else if (isIndexUp && isMiddleUp && !isRingUp && !isPinkyUp) {
+                        fingerCount = 2;
+                    } else if (isIndexUp && isMiddleUp && isRingUp && !isPinkyUp) {
+                        fingerCount = 3;
+                    }
+                }
+
+                this.canvasCtx.restore();
+
+                if (isSetupScreen) {
+                    this.updateSetupGestureUI(fingerCount);
+                } else {
+                    this.processGameplayGesture(fingerCount);
+                }
+            }
+
+            updateSetupGestureUI(count) {
+                const textEl = document.getElementById('detected-gesture-text');
+                if (!textEl) return;
+
+                if (count === 1) textEl.innerText = "1 Jari (Pilihan A) Dikesan! ✔️";
+                else if (count === 2) textEl.innerText = "2 Jari (Pilihan B) Dikesan! ✔️";
+                else if (count === 3) textEl.innerText = "3 Jari (Pilihan C) Dikesan! ✔️";
+                else textEl.innerText = "Sila tunjukkan 1, 2 atau 3 jari di kamera";
+            }
+
+            processGameplayGesture(count) {
+                if (this.isProcessingAnswer) return;
+
+                const statusEl = document.getElementById('game-gesture-status');
+                const dwellContainer = document.getElementById('dwell-container');
+                const dwellCircle = document.getElementById('dwell-circle');
+                
+                if (count === 1 || count === 2 || count === 3) {
+                    const optionLetter = count === 1 ? 'A' : (count === 2 ? 'B' : 'C');
+                    statusEl.innerText = `${count} Jari -> Pilihan ${optionLetter}`;
+                    
+                    this.highlightCardOnly(optionLetter);
+
+                    if (this.lastStableGesture === count) {
+                        const elapsed = Date.now() - this.dwellStartTime;
+                        const progress = Math.min(elapsed / this.dwellDuration, 1.0);
+                        
+                        if (dwellCircle) {
+                            const circumference = 201;
+                            const offset = circumference - (progress * circumference);
+                            dwellCircle.style.strokeDashoffset = offset;
+                        }
+                        if (dwellContainer) dwellContainer.style.opacity = '1';
+
+                        if (elapsed >= this.dwellDuration) {
+                            this.dwellStartTime = null;
+                            this.lastStableGesture = 0;
+                            if (dwellContainer) dwellContainer.style.opacity = '0';
+                            
+                            this.confirmAnswer(optionLetter);
+                        }
+                    } else {
+                        this.lastStableGesture = count;
+                        this.dwellStartTime = Date.now();
+                    }
+                } else {
+                    statusEl.innerText = "Tunjukkan 1, 2 atau 3 Jari";
+                    this.lastStableGesture = 0;
+                    this.dwellStartTime = null;
+                    if (dwellContainer) dwellContainer.style.opacity = '0';
+                    this.clearCardHighlights();
+                }
+            }
+
+            highlightCardOnly(letter) {
+                ['A', 'B', 'C'].forEach(l => {
+                    const card = document.getElementById(`card-opt-${l}`);
+                    if (card) {
+                        if (l === letter) {
+                            card.classList.add('border-amber-400', 'bg-amber-50/90', 'scale-[1.02]');
+                        } else {
+                            card.classList.remove('border-amber-400', 'bg-amber-50/90', 'scale-[1.02]');
+                        }
+                    }
+                });
+            }
+
+            clearCardHighlights() {
+                ['A', 'B', 'C'].forEach(l => {
+                    const card = document.getElementById(`card-opt-${l}`);
+                    if (card) card.classList.remove('border-amber-400', 'bg-amber-50/90', 'scale-[1.02]');
+                });
+            }
+
+            startGameplay() {
+                this.sound.playBeep(650, 0.1);
+                
+                this.questions = QUESTION_DATABASE.map(q => {
+                    return {
+                        ...q,
+                        options: this.shuffleArray(q.options)
+                    };
+                });
+                
+                this.questions = this.shuffleArray(this.questions);
+                this.currentQuestionIndex = 0;
+                this.score = 0;
+                
+                document.getElementById('header-score').innerText = '0';
+                this.showScreen('screen-game');
+
+                if (!this.touchFallbackMode) {
+                    this.initHandTracking('webcam-game', 'canvas-game', false);
+                } else {
+                    const camWidget = document.getElementById('webcam-game').parentElement;
+                    if (camWidget) camWidget.parentElement.classList.add('hidden');
+                }
+
+                this.loadQuestion(0);
+            }
+
+            loadQuestion(index) {
+                this.isProcessingAnswer = false;
+                this.currentAttempts = 0;
+                this.selectedOptionLetter = null;
+                
+                const q = this.questions[index];
+                
+                document.getElementById('game-mission-name').innerText = q.missionName;
+                document.getElementById('mission-title-header').innerText = q.missionName;
+                document.getElementById('question-tag').innerText = q.focusTag;
+                document.getElementById('question-text').innerText = q.question;
+                document.getElementById('current-q-num').innerText = index + 1;
+                
+                const progressPct = ((index + 1) / 8) * 100;
+                document.getElementById('question-progress-bar').style.width = `${progressPct}%`;
+
+                ['A', 'B', 'C'].forEach((letter, idx) => {
+                    const opt = q.options[idx];
+                    const textEl = document.getElementById(`text-opt-${letter}`);
+                    const cardEl = document.getElementById(`card-opt-${letter}`);
+                    
+                    if (textEl) textEl.innerText = opt.text;
+                    if (cardEl) {
+                        cardEl.className = "glass-card p-4 rounded-2xl border-2 border-transparent hover:border-teal-400 cursor-pointer transition flex items-center justify-between group";
+                    }
+                });
+
+                document.getElementById('duiti-dialogue').innerText = '"Tunjukkan 1, 2 atau 3 jari di hadapan kamera untuk memilih secara automatik!"';
+                document.getElementById('btn-next-question').classList.add('hidden');
+            }
+
+            selectOption(letter) {
+                this.selectedOptionLetter = letter;
+                this.highlightCardOnly(letter);
+                this.confirmAnswer(letter);
+            }
+
+            confirmAnswer(letter) {
+                if (this.isProcessingAnswer) return;
+                
+                const q = this.questions[this.currentQuestionIndex];
+                const optIndex = letter === 'A' ? 0 : (letter === 'B' ? 1 : 2);
+                const selectedOpt = q.options[optIndex];
+                
+                this.currentAttempts++;
+                
+                const selectedCard = document.getElementById(`card-opt-${letter}`);
+                const dialogueEl = document.getElementById('duiti-dialogue');
+
+                if (selectedOpt.isCorrect) {
+                    this.isProcessingAnswer = true;
+                    this.sound.playSuccess();
+                    
+                    selectedCard.classList.remove('border-amber-400', 'bg-amber-50/90');
+                    selectedCard.classList.add('border-emerald-500', 'bg-emerald-100', 'text-emerald-900');
+                    
+                    let points = 100;
+                    if (this.currentAttempts === 2) points = 70;
+                    else if (this.currentAttempts >= 3) points = 50;
+                    
+                    this.score += points;
+                    document.getElementById('header-score').innerText = this.score;
+
+                    dialogueEl.innerText = `"TAHNIAH! Jawapan anda TEPAT! Anda telah menguasai konsep ini (+${points} Mata)."`;
+                    
+                    document.getElementById('btn-next-question').classList.remove('hidden');
+
+                } else {
+                    this.sound.playError();
+                    selectedCard.classList.add('border-rose-400', 'bg-rose-50');
+                    dialogueEl.innerText = `"Belum tepat! Petunjuk Duiti: ${q.hint}"`;
+                }
+            }
+
+            nextQuestion() {
+                this.sound.playBeep(500, 0.08);
+                if (this.currentQuestionIndex < this.questions.length - 1) {
+                    this.currentQuestionIndex++;
+                    this.loadQuestion(this.currentQuestionIndex);
+                } else {
+                    this.showVictoryScreen();
+                }
+            }
+
+            showVictoryScreen() {
+                this.sound.playSuccess();
+                this.stopCameraStream();
+                document.getElementById('final-score').innerText = this.score;
+                this.showScreen('screen-victory');
+            }
+
+            resetGame() {
+                this.showScreen('screen-welcome');
+            }
+        }
+
+        let game;
+        window.addEventListener('load', () => {
+            game = new DuitopiaGame();
+            game.init();
+        });
+    </script>
+</body>
+</html>
